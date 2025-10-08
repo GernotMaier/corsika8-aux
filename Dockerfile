@@ -1,6 +1,7 @@
 FROM almalinux:9.5-minimal
 ARG FLUKA=OFF
 ARG PYTHON_VERSION="3.12"
+ARG CORSIKA_BRANCH="master"
 WORKDIR /workdir/
 
 RUN microdnf update -y && \
@@ -9,7 +10,7 @@ RUN microdnf update -y && \
     gcc-c++ gcc-gfortran git make \
     perl perl-core \
     python${PYTHON_VERSION} python${PYTHON_VERSION}-pip \
-    python${PYTHON_VERSION}-devel rsync vim && \
+    python${PYTHON_VERSION}-devel rsync tar vim && \
     microdnf clean all && \
     ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python && \
     ln -sf /usr/bin/pip${PYTHON_VERSION} /usr/bin/pip && \
@@ -21,7 +22,7 @@ RUN microdnf update -y && \
 ENV VIRTUAL_ENV=/workdir/virtual/environment/corsika-8
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN git clone --recursive https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git
+RUN git clone --recursive --branch ${CORSIKA_BRANCH} https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git
 
 ENV CONAN_CPU_COUNT=4
 WORKDIR /workdir/corsika-build
