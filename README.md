@@ -14,5 +14,3 @@ podman buildx build --platform=linux/amd64 --no-cache  -f Dockerfile -t corsika8
 ```console
 podman run --platform=linux/arm64 -it --rm corsika8 bash
 ```
-
-Set `CONAN_CPU_COUNT=2`
