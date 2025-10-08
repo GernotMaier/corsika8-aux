@@ -1,6 +1,7 @@
 FROM almalinux:9.5-minimal
 ARG FLUKA=OFF
 ARG PYTHON_VERSION="3.12"
+ARG CORSIKA_BRANCH="master"
 WORKDIR /workdir/
 
 RUN microdnf update -y && \
@@ -21,7 +22,7 @@ RUN microdnf update -y && \
 ENV VIRTUAL_ENV=/workdir/virtual/environment/corsika-8
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN git clone --recursive https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git
+RUN git clone --recursive --branch ${CORSIKA_BRANCH} https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git
 
 ENV CONAN_CPU_COUNT=4
 WORKDIR /workdir/corsika-build
