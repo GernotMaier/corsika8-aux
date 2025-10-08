@@ -95,23 +95,6 @@ jobs:
             corsika.branch=${{ steps.vars.outputs.corsika-branch }}
             corsika.image-type=development
 
-      - name: Build and push runtime image
-        id: build-runtime
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          target: runtime
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.meta-runtime.outputs.tags }}
-          labels: ${{ steps.meta-runtime.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            FLUKA=OFF
-            PYTHON_VERSION=3.12
-            CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
-
       - name: Build and push development image
         id: build-dev
         uses: docker/build-push-action@v5
@@ -122,6 +105,23 @@ jobs:
           push: true
           tags: ${{ steps.meta-dev.outputs.tags }}
           labels: ${{ steps.meta-dev.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            FLUKA=OFF
+            PYTHON_VERSION=3.12
+            CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
+
+      - name: Build and push runtime image
+        id: build-runtime
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: runtime
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta-runtime.outputs.tags }}
+          labels: ${{ steps.meta-runtime.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
