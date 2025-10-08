@@ -21,7 +21,7 @@ RUN microdnf update -y && \
 ENV VIRTUAL_ENV=/workdir/virtual/environment/corsika-8
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN git clone --recursive git@gitlab.iap.kit.edu:AirShowerPhysics/corsika.git
+RUN git clone --recursive https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git
 
 ENV CONAN_CPU_COUNT=4
 WORKDIR /workdir/corsika-build
