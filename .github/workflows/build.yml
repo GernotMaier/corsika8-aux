@@ -1,5 +1,5 @@
 ---
-name: Build and Push Docker Image
+name: CORSIKA8-build
 
 on:
   push:
