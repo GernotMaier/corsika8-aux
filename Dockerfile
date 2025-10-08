@@ -16,7 +16,7 @@ RUN microdnf update -y && \
     python -m venv /workdir/virtual/environment/corsika-8 && \
     source /workdir/virtual/environment/corsika-8/bin/activate && \
     python -m pip install --upgrade pip --root-user-action=ignore && \
-    pip install "conan>=2.20.0" numpy particle==0.25.1
+    pip install "conan>=2.20.0" numpy==2.3 particle==0.25.1
 
 ENV VIRTUAL_ENV=/workdir/virtual/environment/corsika-8
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
