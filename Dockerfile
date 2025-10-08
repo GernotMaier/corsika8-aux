@@ -32,5 +32,5 @@ RUN ../corsika/corsika-cmake.sh \
      -DWITH_FLUKA=${FLUKA} \
      -DCMAKE_INSTALL_PREFIX=../corsika-install"
 
-RUN make -j1 && \
+RUN make -j4 && \
     make install
