@@ -35,7 +35,32 @@ RUN ../corsika/corsika-cmake.sh \
      -DCMAKE_INSTALL_PREFIX=../corsika-install"
 
 RUN make -j4 && \
-    make install
+    make install && \
+    rm -rf /workdir/corsika-build/_deps && \
+    rm -rf /workdir/corsika-build/CMakeFiles && \
+    find /workdir/corsika-build -name "*.o" -delete && \
+    find /workdir/corsika-build -name "*.obj" -delete
+
+# CORSIKA8 examples (development container only)
+WORKDIR /workdir
+RUN export CONAN_DEPENDENCIES="$PWD/corsika-install/lib/cmake/dependencies" && \
+    cmake -DCMAKE_TOOLCHAIN_FILE="${CONAN_DEPENDENCIES}/conan_toolchain.cmake" \
+          -DCMAKE_PREFIX_PATH="${CONAN_DEPENDENCIES}" \
+          -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -Dcorsika_DIR="$PWD/corsika-build" \
+          -DWITH_FLUKA=${FLUKA} \
+          -S "$PWD/corsika/examples" \
+          -B "$PWD/corsika-build-examples"
+
+WORKDIR /workdir/corsika-build-examples
+RUN make -j4 && \
+    rm -rf CMakeFiles && \
+    find . -name "*.o" -delete && \
+    find . -name "*.obj" -delete
+ENV PATH="/workdir/corsika-build-examples/bin:$PATH"
+
+WORKDIR /workdir/
 
 # CORSIKA8 runtime - lightweight image binaries only
 FROM almalinux:9.5-minimal AS runtime

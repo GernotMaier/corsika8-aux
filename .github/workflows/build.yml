@@ -111,6 +111,7 @@ jobs:
             FLUKA=OFF
             PYTHON_VERSION=3.12
             CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
+            BUILDKIT_INLINE_CACHE=1
 
       - name: Build and push runtime image
         id: build-runtime
