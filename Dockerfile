@@ -27,7 +27,9 @@ RUN git clone --recursive --branch ${CORSIKA_BRANCH} https://gitlab.iap.kit.edu/
 
 ENV CONAN_CPU_COUNT=4
 WORKDIR /workdir/corsika-build
-RUN ../corsika/conan-install.sh --source-directory ../corsika --release-with-debug
+RUN ../corsika/conan-install.sh \
+     --source-directory ../corsika --release-with-debug && \
+    conan cache clean "*" --source --build --download
 
 RUN ../corsika/corsika-cmake.sh \
      -c "-DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -60,6 +62,14 @@ RUN make -j4 && \
     find . -name "*.obj" -delete
 ENV PATH="/workdir/corsika-build-examples/bin:$PATH"
 
+# Install CORSIKA Python libraries (development mode with examples and tests)
+WORKDIR /workdir/corsika/python
+RUN pip install -e .[tests,examples] && \
+    pip install argparse matplotlib pandas
+
+# Ensure the virtual environment is complete for runtime use
+RUN pip list > /workdir/virtual/environment/corsika-8/installed_packages.txt
+
 WORKDIR /workdir/
 
 # CORSIKA8 runtime - lightweight image binaries only
@@ -73,12 +83,17 @@ RUN microdnf update -y && \
     && ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python \
     && ln -sf /usr/bin/pip${PYTHON_VERSION} /usr/bin/pip
 
+# Copy the complete, working environment from builder
 COPY --from=builder /workdir/corsika-install /opt/corsika
 COPY --from=builder /workdir/virtual/environment/corsika-8 /opt/corsika-python
+COPY --from=builder /workdir/corsika/python /opt/corsika-src/python
 
 ENV PATH="/opt/corsika/bin:/opt/corsika-python/bin:$PATH"
 ENV LD_LIBRARY_PATH="/opt/corsika/lib:/opt/corsika/lib64:$LD_LIBRARY_PATH"
 ENV VIRTUAL_ENV="/opt/corsika-python"
+
+# Verify that CORSIKA Python library is properly installed
+RUN /opt/corsika-python/bin/python -c "import corsika; print('CORSIKA Python library successfully installed')"
 
 WORKDIR /workspace
 
