@@ -1,4 +1,5 @@
-FROM almalinux:9.5-minimal
+# CORSIKA8 build stage - contains all development tools and source code
+FROM almalinux:9.5-minimal AS builder
 ARG FLUKA=OFF
 ARG PYTHON_VERSION="3.12"
 ARG CORSIKA_BRANCH="master"
@@ -35,3 +36,25 @@ RUN ../corsika/corsika-cmake.sh \
 
 RUN make -j4 && \
     make install
+
+# CORSIKA8 runtime - lightweight image binaries only
+FROM almalinux:9.5-minimal AS runtime
+ARG PYTHON_VERSION="3.12"
+
+RUN microdnf update -y && \
+    microdnf install -y \
+    python${PYTHON_VERSION} python${PYTHON_VERSION}-pip \
+    && microdnf clean all \
+    && ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python \
+    && ln -sf /usr/bin/pip${PYTHON_VERSION} /usr/bin/pip
+
+COPY --from=builder /workdir/corsika-install /opt/corsika
+COPY --from=builder /workdir/virtual/environment/corsika-8 /opt/corsika-python
+
+ENV PATH="/opt/corsika/bin:/opt/corsika-python/bin:$PATH"
+ENV LD_LIBRARY_PATH="/opt/corsika/lib:/opt/corsika/lib64:$LD_LIBRARY_PATH"
+ENV VIRTUAL_ENV="/opt/corsika-python"
+
+WORKDIR /workspace
+
+FROM runtime
