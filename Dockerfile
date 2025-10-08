@@ -9,7 +9,7 @@ RUN microdnf update -y && \
     gcc-c++ gcc-gfortran git make \
     perl perl-core \
     python${PYTHON_VERSION} python${PYTHON_VERSION}-pip \
-    python${PYTHON_VERSION}-devel rsync vim && \
+    python${PYTHON_VERSION}-devel rsync tar vim && \
     microdnf clean all && \
     ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python && \
     ln -sf /usr/bin/pip${PYTHON_VERSION} /usr/bin/pip && \
