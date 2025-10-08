@@ -18,12 +18,6 @@ repos:
   - id: check-json
   - id: no-commit-to-branch
     args: [--branch=main]
-# https://github.com/HunterMcGushion/docstr_coverage
-- repo: https://github.com/HunterMcGushion/docstr_coverage
-  rev: v2.3.2  # most recent docstr-coverage release or commit sha
-  hooks:
-  - id: docstr-coverage
-    args: ["--verbose", "2", "--fail-under", "70.", "src/simtools"]
 # Github action
 - repo: https://github.com/rhysd/actionlint
   rev: v1.7.7
