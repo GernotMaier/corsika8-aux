@@ -83,18 +83,20 @@ RUN microdnf update -y && \
     && ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python \
     && ln -sf /usr/bin/pip${PYTHON_VERSION} /usr/bin/pip
 
-# Copy the complete, working environment from builder
+# Copy built CORSIKA binaries and source
 COPY --from=builder /workdir/corsika-install /opt/corsika
-COPY --from=builder /workdir/virtual/environment/corsika-8 /opt/corsika-python
 COPY --from=builder /workdir/corsika/python /opt/corsika-src/python
+
+RUN python -m venv /opt/corsika-python && \
+    /opt/corsika-python/bin/pip install --upgrade pip
 
 ENV PATH="/opt/corsika/bin:/opt/corsika-python/bin:$PATH"
 ENV LD_LIBRARY_PATH="/opt/corsika/lib:/opt/corsika/lib64:$LD_LIBRARY_PATH"
 ENV VIRTUAL_ENV="/opt/corsika-python"
 
-# CORSIKA8 Python library installation for runtime
 WORKDIR /opt/corsika-src/python
-RUN /opt/corsika-python/bin/pip install --no-deps -e . && \
+RUN /opt/corsika-python/bin/pip install numpy==2.3 particle==0.25.1 matplotlib pandas && \
+    /opt/corsika-python/bin/pip install -e .[examples] && \
     /opt/corsika-python/bin/python -c "import corsika; print('CORSIKA Python library successfully installed')"
 
 WORKDIR /workspace
