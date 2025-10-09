@@ -78,27 +78,30 @@ ARG PYTHON_VERSION="3.12"
 
 RUN microdnf update -y && \
     microdnf install -y \
+    findutils \
+    libgfortran libstdc++ libgomp \
     python${PYTHON_VERSION} python${PYTHON_VERSION}-pip \
+    rsync tar vim \
     && microdnf clean all \
     && ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python \
     && ln -sf /usr/bin/pip${PYTHON_VERSION} /usr/bin/pip
 
 # Copy built CORSIKA binaries and source
-COPY --from=builder /workdir/corsika-install /opt/corsika
-COPY --from=builder /workdir/corsika/python /opt/corsika-src/python
+COPY --from=builder /workdir/corsika-install /workdir/corsika-install
+COPY --from=builder /workdir/corsika/python /workdir/corsika/python
 
-RUN python -m venv /opt/corsika-python && \
-    /opt/corsika-python/bin/pip install --upgrade pip
+RUN python -m venv /workdir/virtual/environment/corsika-8 && \
+    /workdir/virtual/environment/corsika-8/bin/pip install --upgrade pip
 
-ENV PATH="/opt/corsika/bin:/opt/corsika-python/bin:$PATH"
-ENV LD_LIBRARY_PATH="/opt/corsika/lib:/opt/corsika/lib64:$LD_LIBRARY_PATH"
-ENV VIRTUAL_ENV="/opt/corsika-python"
+ENV PATH="/workdir/corsika-install/bin:/workdir/virtual/environment/corsika-8/bin:$PATH"
+ENV LD_LIBRARY_PATH="/workdir/corsika-install/lib:/workdir/corsika-install/lib64:$LD_LIBRARY_PATH"
+ENV VIRTUAL_ENV="/workdir/virtual/environment/corsika-8"
 
-WORKDIR /opt/corsika-src/python
-RUN /opt/corsika-python/bin/pip install numpy==2.3 particle==0.25.1 matplotlib pandas && \
-    /opt/corsika-python/bin/pip install -e .[examples] && \
-    /opt/corsika-python/bin/python -c "import corsika; print('CORSIKA Python library successfully installed')"
+WORKDIR /workdir/corsika/python
+RUN /workdir/virtual/environment/corsika-8/bin/pip install numpy==2.3 particle==0.25.1 matplotlib pandas && \
+    /workdir/virtual/environment/corsika-8/bin/pip install -e .[examples] && \
+    /workdir/virtual/environment/corsika-8/bin/python -c "import corsika; print('CORSIKA Python library successfully installed')"
 
-WORKDIR /workspace
+WORKDIR /workdir
 
 FROM runtime
