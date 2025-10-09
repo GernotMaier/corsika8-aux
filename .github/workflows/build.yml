@@ -23,8 +23,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
-      image-digest: ${{ steps.build.outputs.digest }}
+      runtime-image-tag: ${{ steps.meta-runtime.outputs.tags }}
+      dev-image-tag: ${{ steps.meta-dev.outputs.tags }}
+      image-digest: ${{ steps.build-runtime.outputs.digest }}
     permissions:
       contents: read
       packages: write
@@ -58,8 +59,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
+      - name: Extract metadata for runtime image
+        id: meta-runtime
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ steps.vars.outputs.image-name }}
@@ -71,19 +72,57 @@ jobs:
             type=semver,pattern={{major}}
             type=raw,value=latest,enable={{is_default_branch}}
           labels: |
-            org.opencontainers.image.title=CORSIKA8 Auxiliary
-            org.opencontainers.image.description=CORSIKA8 build with branch ${{ steps.vars.outputs.corsika-branch }}
+            org.opencontainers.image.title=CORSIKA8 Runtime
+            org.opencontainers.image.description=CORSIKA8 runtime image with branch ${{ steps.vars.outputs.corsika-branch }}
             corsika.branch=${{ steps.vars.outputs.corsika-branch }}
+            corsika.image-type=runtime
 
-      - name: Build and push Docker image
-        id: build
+      - name: Extract metadata for development image
+        id: meta-dev
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.vars.outputs.image-name }}-dev
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=CORSIKA8 Development
+            org.opencontainers.image.description=CORSIKA8 development image with branch ${{ steps.vars.outputs.corsika-branch }}
+            corsika.branch=${{ steps.vars.outputs.corsika-branch }}
+            corsika.image-type=development
+
+      - name: Build and push development image
+        id: build-dev
         uses: docker/build-push-action@v5
         with:
           context: .
+          target: builder
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-dev.outputs.tags }}
+          labels: ${{ steps.meta-dev.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            FLUKA=OFF
+            PYTHON_VERSION=3.12
+            CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Build and push runtime image
+        id: build-runtime
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: runtime
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta-runtime.outputs.tags }}
+          labels: ${{ steps.meta-runtime.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -108,6 +147,6 @@ jobs:
 
       - name: Run unit tests
         run: |
-          # Extract the first tag from the multi-line tags output
-          IMAGE_TAG=$(echo "${{ needs.build.outputs.image-tag }}" | head -n1)
-          docker run --rm $IMAGE_TAG bash -c "ctest -j4"
+          # Use development image for testing since it contains the build directory
+          IMAGE_TAG=$(echo "${{ needs.build.outputs.dev-image-tag }}" | head -n1)
+          docker run --rm $IMAGE_TAG bash -c "cd /workdir/corsika-build && ctest -j4"
