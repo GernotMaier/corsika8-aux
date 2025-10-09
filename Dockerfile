@@ -89,6 +89,7 @@ RUN microdnf update -y && \
 # Copy built CORSIKA binaries and source
 COPY --from=builder /workdir/corsika-install /workdir/corsika-install
 COPY --from=builder /workdir/corsika/python /workdir/corsika/python
+COPY --from=builder /workdir/corsika/modules/data /workdir/corsika/modules/data
 
 RUN python -m venv /workdir/virtual/environment/corsika-8 && \
     /workdir/virtual/environment/corsika-8/bin/pip install --upgrade pip
