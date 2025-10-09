@@ -92,8 +92,10 @@ ENV PATH="/opt/corsika/bin:/opt/corsika-python/bin:$PATH"
 ENV LD_LIBRARY_PATH="/opt/corsika/lib:/opt/corsika/lib64:$LD_LIBRARY_PATH"
 ENV VIRTUAL_ENV="/opt/corsika-python"
 
-# Verify that CORSIKA Python library is properly installed
-RUN /opt/corsika-python/bin/python -c "import corsika; print('CORSIKA Python library successfully installed')"
+# CORSIKA8 Python library installation for runtime
+WORKDIR /opt/corsika-src/python
+RUN /opt/corsika-python/bin/pip install --no-deps -e . && \
+    /opt/corsika-python/bin/python -c "import corsika; print('CORSIKA Python library successfully installed')"
 
 WORKDIR /workspace
 
