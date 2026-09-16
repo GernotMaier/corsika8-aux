@@ -2,6 +2,8 @@
 
 This repository contains auxiliary files for CORSIKA8, such as Dockerfiles and scripts to install dependencies.
 
+Please refer to the main [CORSIKA gitlab](https://gitlab.iap.kit.edu/AirShowerPhysics/corsika) for any relevant information.
+
 ## Installation steps
 
 ### Base image
