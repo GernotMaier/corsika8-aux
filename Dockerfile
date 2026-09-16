@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.7
 # CORSIKA8 build stage - source code compiled on a reusable toolchain image.
 # Build Dockerfile.toolchain locally first, or use the published image.
 ARG CORSIKA_TOOLCHAIN_IMAGE=ghcr.io/gernotmaier/corsika8-aux-toolchain:latest
@@ -8,15 +7,13 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG FLUKA=OFF
 ARG CORSIKA_BRANCH="master"
 ARG BUILD_JOBS=4
-ARG TARGETARCH
 WORKDIR /workdir/
 
 RUN git clone --recursive --branch "${CORSIKA_BRANCH}" https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git
 
 ENV CONAN_CPU_COUNT=4
 WORKDIR /workdir/corsika-build
-RUN --mount=type=cache,id=corsika-conan-${TARGETARCH},target=/root/.conan2,sharing=locked \
-    ../corsika/conan-install.sh \
+RUN ../corsika/conan-install.sh \
      --source-directory ../corsika --release && \
     conan cache clean "*" --source --build --download
 

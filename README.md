@@ -44,11 +44,9 @@ The runtime image is built in `Release` mode. It contains the installed CORSIKA
 data at `/workdir/corsika-install/share/corsika/data`; set `CORSIKA_DATA` only
 when intentionally overriding that location.
 
-The code build uses a persistent, architecture-specific Conan cache. The first
-build for a dependency set is still expensive; later builds of another CORSIKA
-ref reuse downloaded and compiled Conan packages. The cache is local to the
-container builder. CI pins each code build to the digest of its published
-toolchain image.
+The CI workflow pins each code build to the digest of its published toolchain
+image. A future dependency image can safely cache Conan packages; a simple
+build-cache mount is insufficient because CMake records absolute Conan paths.
 
 `BUILD_JOBS` defaults to `4`. Lower it on constrained hosts; CI uses `2` to
 avoid memory pressure while compiling CORSIKA and its external projects.
