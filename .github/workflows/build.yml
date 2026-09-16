@@ -17,7 +17,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
@@ -41,15 +40,18 @@ jobs:
           git check-ref-format --branch "$CORSIKA_BRANCH" > /dev/null
           echo "corsika-branch=$CORSIKA_BRANCH" >> "$GITHUB_OUTPUT"
 
+          REPOSITORY_NAME=$(printf '%s' "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "repository-name=$REPOSITORY_NAME" >> "$GITHUB_OUTPUT"
+
           if [ "$CORSIKA_BRANCH" != "master" ]; then
             # A Git branch may contain characters that are illegal in an image
             # repository name. Keep a readable slug and a hash to avoid collisions.
             BRANCH_SLUG=$(printf '%s' "$CORSIKA_BRANCH" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-' | sed 's/^[._-]*//; s/[._-]*$//' | cut -c1-48)
             test -n "$BRANCH_SLUG"
             BRANCH_HASH=$(printf '%s' "$CORSIKA_BRANCH" | sha256sum | cut -c1-12)
-            IMAGE_NAME="${{ env.IMAGE_NAME }}-corsika-$BRANCH_SLUG-$BRANCH_HASH"
+            IMAGE_NAME="$REPOSITORY_NAME-corsika-$BRANCH_SLUG-$BRANCH_HASH"
           else
-            IMAGE_NAME="${{ env.IMAGE_NAME }}"
+            IMAGE_NAME="$REPOSITORY_NAME"
           fi
           echo "image-name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
 
@@ -85,7 +87,7 @@ jobs:
         id: meta-toolchain
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}-toolchain
+          images: ${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain
           tags: |
             type=raw,value=latest
           labels: |
@@ -142,7 +144,7 @@ jobs:
             FLUKA=OFF
             BUILD_JOBS=2
             CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
-            CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ github.repository }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
+            CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
 
       - name: Build and push runtime image
         id: build-runtime
@@ -161,7 +163,7 @@ jobs:
             BUILD_JOBS=2
             PYTHON_VERSION=3.12
             CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
-            CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ github.repository }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
+            CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
 
   unit-tests-dev:
     runs-on: ubuntu-latest
