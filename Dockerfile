@@ -32,8 +32,7 @@ RUN ../corsika/conan-install.sh \
     conan cache clean "*" --source --build --download
 
 RUN ../corsika/corsika-cmake.sh \
-     -c "-DCMAKE_BUILD_TYPE=Release \
-     -DWITH_FLUKA=${FLUKA} \
+     -c "-DWITH_FLUKA=${FLUKA} \
      -DCMAKE_INSTALL_PREFIX=../corsika-install"
 
 RUN make -j4 && \
@@ -64,8 +63,7 @@ ENV PATH="/workdir/corsika-build-examples/bin:$PATH"
 
 # Install CORSIKA Python libraries (development mode with examples and tests)
 WORKDIR /workdir/corsika/python
-RUN python -m pip install -e .[tests,examples] && \
-    python -m pip install matplotlib pandas
+RUN python -m pip install -e '.[test,examples]'
 
 # Ensure the virtual environment is complete for runtime use
 RUN pip list > /workdir/virtual/environment/corsika-8/installed_packages.txt
@@ -98,8 +96,7 @@ ENV LD_LIBRARY_PATH="/workdir/corsika-install/lib:/workdir/corsika-install/lib64
 ENV VIRTUAL_ENV="/workdir/virtual/environment/corsika-8"
 
 WORKDIR /workdir/corsika/python
-RUN /workdir/virtual/environment/corsika-8/bin/pip install numpy==2.3 particle==0.25.1 matplotlib pandas && \
-    /workdir/virtual/environment/corsika-8/bin/pip install -e .[examples] && \
+RUN /workdir/virtual/environment/corsika-8/bin/python -m pip install -e '.[examples]' && \
     /workdir/virtual/environment/corsika-8/bin/python -c "import corsika; print('CORSIKA Python library successfully installed')"
 
 WORKDIR /workdir
