@@ -81,6 +81,18 @@ jobs:
             corsika.branch=${{ steps.vars.outputs.corsika-branch }}
             corsika.image-type=runtime
 
+      - name: Extract metadata for toolchain image
+        id: meta-toolchain
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}-toolchain
+          tags: |
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=CORSIKA8 Toolchain
+            org.opencontainers.image.description=Reusable CORSIKA8 compiler and Conan toolchain
+            corsika.image-type=toolchain
+
       - name: Extract metadata for development image
         id: meta-dev
         uses: docker/metadata-action@v5
@@ -99,6 +111,21 @@ jobs:
             corsika.branch=${{ steps.vars.outputs.corsika-branch }}
             corsika.image-type=development
 
+      - name: Build and push toolchain image
+        id: build-toolchain
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.toolchain
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta-toolchain.outputs.tags }}
+          labels: ${{ steps.meta-toolchain.outputs.labels }}
+          cache-from: type=gha,scope=toolchain
+          cache-to: type=gha,mode=max,scope=toolchain
+          build-args: |
+            PYTHON_VERSION=3.12
+
       - name: Build and push development image
         id: build-dev
         uses: docker/build-push-action@v5
@@ -113,9 +140,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             FLUKA=OFF
-            PYTHON_VERSION=3.12
             CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
-            BUILDKIT_INLINE_CACHE=1
+            CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ github.repository }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
 
       - name: Build and push runtime image
         id: build-runtime
@@ -133,6 +159,7 @@ jobs:
             FLUKA=OFF
             PYTHON_VERSION=3.12
             CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
+            CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ github.repository }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
 
   unit-tests-dev:
     runs-on: ubuntu-latest

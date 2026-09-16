@@ -1,0 +1,26 @@
+# Reusable CORSIKA8 build toolchain. Publish this image separately from
+# CORSIKA itself so compiler and Python setup is shared across source refs.
+FROM almalinux:9.5-minimal
+
+ARG PYTHON_VERSION="3.12"
+WORKDIR /workdir/
+
+RUN microdnf update -y && \
+    microdnf install -y \
+    binutils cmake findutils \
+    gcc-c++ gcc-gfortran git make \
+    perl perl-core \
+    python${PYTHON_VERSION} python${PYTHON_VERSION}-pip \
+    python${PYTHON_VERSION}-devel rsync tar vim && \
+    microdnf clean all && \
+    ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python && \
+    ln -sf /usr/bin/pip${PYTHON_VERSION} /usr/bin/pip && \
+    python -m venv /workdir/virtual/environment/corsika-8 && \
+    . /workdir/virtual/environment/corsika-8/bin/activate && \
+    python -m pip install --upgrade pip --root-user-action=ignore && \
+    python -m pip install "conan>=2.20.0" numpy==2.3 particle==0.25.1
+
+ENV VIRTUAL_ENV=/workdir/virtual/environment/corsika-8
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+# Keep Conan's package cache at a stable, mountable location for code builds.
+ENV CONAN_HOME=/root/.conan2
