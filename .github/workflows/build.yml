@@ -140,6 +140,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             FLUKA=OFF
+            BUILD_JOBS=2
             CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
             CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ github.repository }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
 
@@ -157,6 +158,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             FLUKA=OFF
+            BUILD_JOBS=2
             PYTHON_VERSION=3.12
             CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
             CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ github.repository }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
@@ -179,7 +181,7 @@ jobs:
       - name: Run unit tests
         run: |
           IMAGE_TAG=$(echo "${{ needs.build.outputs.dev-image-tag }}" | head -n1)
-          docker run --rm "$IMAGE_TAG" bash -c "cd /workdir/corsika-build && ctest -j4"
+          docker run --rm "$IMAGE_TAG" bash -c "cd /workdir/corsika-build && ctest -j2"
 
   shower-tests:
     runs-on: ubuntu-latest

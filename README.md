@@ -20,6 +20,7 @@ podman build --platform=linux/arm64 -f Dockerfile.toolchain -t corsika8-toolchai
 ```console
 podman build --platform=linux/arm64 \
   --build-arg CORSIKA_TOOLCHAIN_IMAGE=localhost/corsika8-toolchain \
+  --build-arg BUILD_JOBS=4 \
   --build-arg CORSIKA_BRANCH=master -t corsika8 .
 podman build --platform=linux/arm64 \
   --build-arg CORSIKA_TOOLCHAIN_IMAGE=localhost/corsika8-toolchain \
@@ -48,3 +49,6 @@ build for a dependency set is still expensive; later builds of another CORSIKA
 ref reuse downloaded and compiled Conan packages. The cache is local to the
 container builder. CI pins each code build to the digest of its published
 toolchain image.
+
+`BUILD_JOBS` defaults to `4`. Lower it on constrained hosts; CI uses `2` to
+avoid memory pressure while compiling CORSIKA and its external projects.

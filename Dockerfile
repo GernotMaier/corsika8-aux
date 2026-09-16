@@ -3,9 +3,11 @@
 # Build Dockerfile.toolchain locally first, or use the published image.
 ARG CORSIKA_TOOLCHAIN_IMAGE=ghcr.io/gernotmaier/corsika8-aux-toolchain:latest
 FROM ${CORSIKA_TOOLCHAIN_IMAGE} AS builder
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG FLUKA=OFF
 ARG CORSIKA_BRANCH="master"
+ARG BUILD_JOBS=4
 ARG TARGETARCH
 WORKDIR /workdir/
 
@@ -22,8 +24,23 @@ RUN ../corsika/corsika-cmake.sh \
      -c "-DWITH_FLUKA=${FLUKA} \
      -DCMAKE_INSTALL_PREFIX=../corsika-install"
 
-RUN make -j4 && \
-    make install && \
+RUN build_log=/tmp/corsika-build.log && \
+    make -j"${BUILD_JOBS}" 2>&1 | tee "$build_log"; \
+    build_status=${PIPESTATUS[0]}; \
+    if [ "$build_status" -ne 0 ]; then \
+      echo "CORSIKA compilation failed; relevant diagnostics follow:"; \
+      grep -nEi 'error:|fatal error:|undefined reference|collect2:|ld:|No rule to make target|killed' "$build_log" || true; \
+      tail -n 200 "$build_log"; \
+      exit "$build_status"; \
+    fi; \
+    make install 2>&1 | tee -a "$build_log"; \
+    install_status=${PIPESTATUS[0]}; \
+    if [ "$install_status" -ne 0 ]; then \
+      echo "CORSIKA installation failed; relevant diagnostics follow:"; \
+      grep -nEi 'error:|fatal error:|undefined reference|collect2:|ld:|No rule to make target|killed' "$build_log" || true; \
+      tail -n 200 "$build_log"; \
+      exit "$install_status"; \
+    fi; \
     rm -rf /workdir/corsika-build/_deps && \
     rm -rf /workdir/corsika-build/CMakeFiles && \
     find /workdir/corsika-build -name "*.o" -delete && \
@@ -42,7 +59,7 @@ RUN export CONAN_DEPENDENCIES="$PWD/corsika-install/lib/cmake/dependencies" && \
           -B "$PWD/corsika-build-examples"
 
 WORKDIR /workdir/corsika-build-examples
-RUN make -j4 && \
+RUN make -j"${BUILD_JOBS}" && \
     rm -rf CMakeFiles && \
     find . -name "*.o" -delete && \
     find . -name "*.obj" -delete
