@@ -18,21 +18,21 @@ RUN microdnf update -y && \
     python -m venv /workdir/virtual/environment/corsika-8 && \
     source /workdir/virtual/environment/corsika-8/bin/activate && \
     python -m pip install --upgrade pip --root-user-action=ignore && \
-    pip install "conan>=2.20.0" numpy==2.3 particle==0.25.1
+    python -m pip install "conan>=2.20.0" numpy==2.3 particle==0.25.1
 
 ENV VIRTUAL_ENV=/workdir/virtual/environment/corsika-8
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN git clone --recursive --branch ${CORSIKA_BRANCH} https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git
+RUN git clone --recursive --branch "${CORSIKA_BRANCH}" https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git
 
 ENV CONAN_CPU_COUNT=4
 WORKDIR /workdir/corsika-build
 RUN ../corsika/conan-install.sh \
-     --source-directory ../corsika --release-with-debug && \
+     --source-directory ../corsika --release && \
     conan cache clean "*" --source --build --download
 
 RUN ../corsika/corsika-cmake.sh \
-     -c "-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+     -c "-DCMAKE_BUILD_TYPE=Release \
      -DWITH_FLUKA=${FLUKA} \
      -DCMAKE_INSTALL_PREFIX=../corsika-install"
 
@@ -49,7 +49,7 @@ RUN export CONAN_DEPENDENCIES="$PWD/corsika-install/lib/cmake/dependencies" && \
     cmake -DCMAKE_TOOLCHAIN_FILE="${CONAN_DEPENDENCIES}/conan_toolchain.cmake" \
           -DCMAKE_PREFIX_PATH="${CONAN_DEPENDENCIES}" \
           -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_BUILD_TYPE=Release \
           -Dcorsika_DIR="$PWD/corsika-build" \
           -DWITH_FLUKA=${FLUKA} \
           -S "$PWD/corsika/examples" \
@@ -64,8 +64,8 @@ ENV PATH="/workdir/corsika-build-examples/bin:$PATH"
 
 # Install CORSIKA Python libraries (development mode with examples and tests)
 WORKDIR /workdir/corsika/python
-RUN pip install -e .[tests,examples] && \
-    pip install argparse matplotlib pandas
+RUN python -m pip install -e .[tests,examples] && \
+    python -m pip install matplotlib pandas
 
 # Ensure the virtual environment is complete for runtime use
 RUN pip list > /workdir/virtual/environment/corsika-8/installed_packages.txt
@@ -86,10 +86,9 @@ RUN microdnf update -y && \
     && ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python \
     && ln -sf /usr/bin/pip${PYTHON_VERSION} /usr/bin/pip
 
-# Copy built CORSIKA binaries and source
 COPY --from=builder /workdir/corsika-install /workdir/corsika-install
+# The editable Python package installed below requires its source tree at runtime.
 COPY --from=builder /workdir/corsika/python /workdir/corsika/python
-COPY --from=builder /workdir/corsika/modules/data /workdir/corsika/modules/data
 
 RUN python -m venv /workdir/virtual/environment/corsika-8 && \
     /workdir/virtual/environment/corsika-8/bin/pip install --upgrade pip
