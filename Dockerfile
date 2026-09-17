@@ -12,7 +12,7 @@ WORKDIR /workdir/
 # Pythia's historic release archives moved from /download to /releases.
 RUN git clone --recursive --branch "${CORSIKA_BRANCH}" https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git && \
     sed -i \
-      's#https://pythia.org/download/pythia83/pythia8315.tar.bz2#https://pythia.org/releases/pythia83/pythia8315.tar.bz2#g' \
+      's#https://pythia.org/download/pythia83#https://pythia.org/releases/pythia83#g' \
       /workdir/corsika/modules/pythia8/CMakeLists.txt
 
 ENV CONAN_CPU_COUNT=4
