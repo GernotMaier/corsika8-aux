@@ -103,12 +103,12 @@ RUN python -m venv /workdir/virtual/environment/corsika-8 && \
     /workdir/virtual/environment/corsika-8/bin/pip install --upgrade pip
 
 ENV PATH="/workdir/corsika-install/bin:/workdir/virtual/environment/corsika-8/bin:$PATH"
-ENV LD_LIBRARY_PATH="/workdir/corsika-install/lib:/workdir/corsika-install/lib64:$LD_LIBRARY_PATH"
+ENV LD_LIBRARY_PATH="/workdir/corsika-install/lib:/workdir/corsika-install/lib64"
 ENV VIRTUAL_ENV="/workdir/virtual/environment/corsika-8"
 
 WORKDIR /workdir/corsika/python
 RUN /workdir/virtual/environment/corsika-8/bin/python -m pip install -e '.[examples]' && \
-    /workdir/virtual/environment/corsika-8/bin/python -c "import corsika; print('CORSIKA Python library successfully installed')"
+    /workdir/virtual/environment/corsika-8/bin/python -c "import corsika8.io; print('CORSIKA Python library successfully installed')"
 
 WORKDIR /workdir
 
