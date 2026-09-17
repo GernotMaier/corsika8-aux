@@ -22,22 +22,25 @@ RUN ../corsika/corsika-cmake.sh \
      -DCMAKE_INSTALL_PREFIX=../corsika-install"
 
 RUN build_log=/tmp/corsika-build.log && \
-    make -j"${BUILD_JOBS}" 2>&1 | tee "$build_log"; \
-    build_status=${PIPESTATUS[0]}; \
-    if [ "$build_status" -ne 0 ]; then \
-      echo "CORSIKA compilation failed; relevant diagnostics follow:"; \
-      grep -nEi 'error:|fatal error:|undefined reference|collect2:|ld:|No rule to make target|killed' "$build_log" || true; \
-      tail -n 200 "$build_log"; \
-      exit "$build_status"; \
-    fi; \
-    make install 2>&1 | tee -a "$build_log"; \
-    install_status=${PIPESTATUS[0]}; \
-    if [ "$install_status" -ne 0 ]; then \
-      echo "CORSIKA installation failed; relevant diagnostics follow:"; \
-      grep -nEi 'error:|fatal error:|undefined reference|collect2:|ld:|No rule to make target|killed' "$build_log" || true; \
-      tail -n 200 "$build_log"; \
-      exit "$install_status"; \
-    fi; \
+    run_and_report() { \
+      local description="$1"; shift; \
+      "$@" > "$build_log" 2>&1 & \
+      local build_pid=$!; \
+      while kill -0 "$build_pid" 2>/dev/null; do \
+        sleep 30; \
+        kill -0 "$build_pid" 2>/dev/null && echo "$description is still running..."; \
+      done; \
+      wait "$build_pid"; \
+      local status=$?; \
+      if [ "$status" -ne 0 ]; then \
+        echo "$description failed; relevant diagnostics follow:"; \
+        grep -nEi 'error:|fatal error:|undefined reference|collect2:|ld:|No rule to make target|killed|failed' "$build_log" || true; \
+        tail -n 300 "$build_log"; \
+      fi; \
+      return "$status"; \
+    }; \
+    run_and_report "CORSIKA compilation" make -j"${BUILD_JOBS}" && \
+    run_and_report "CORSIKA installation" make install && \
     rm -rf /workdir/corsika-build/_deps && \
     rm -rf /workdir/corsika-build/CMakeFiles && \
     find /workdir/corsika-build -name "*.o" -delete && \
