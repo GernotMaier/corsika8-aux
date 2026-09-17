@@ -25,7 +25,10 @@ RUN ../corsika/conan-install.sh \
 
 RUN ../corsika/corsika-cmake.sh \
      -c "-DWITH_FLUKA=${FLUKA} \
-     -DCMAKE_INSTALL_PREFIX=../corsika-install"
+     -DCMAKE_INSTALL_PREFIX=../corsika-install" && \
+    sed -i \
+      's#/workdir/corsika-build/modules/pythia8/pythia8/install/share/Pythia8/xmldoc/#/workdir/corsika-install/share/Pythia8/xmldoc/#' \
+      /workdir/corsika-build/corsika/modules/pythia8/Pythia8ConfigurationDirectory.hpp
 
 RUN build_log=/tmp/corsika-build.log && \
     run_and_report() { \
