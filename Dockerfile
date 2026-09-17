@@ -9,10 +9,12 @@ ARG CORSIKA_BRANCH="master"
 ARG BUILD_JOBS=4
 WORKDIR /workdir/
 
-# Pythia's historic release archives moved from /download to /releases.
+# Pythia's historic archives are served as .tgz files under /releases.
 RUN git clone --recursive --branch "${CORSIKA_BRANCH}" https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git && \
     sed -i \
-      's#https://pythia.org/download/pythia83#https://pythia.org/releases/pythia83#g' \
+      -e 's#https://pythia.org/download/pythia83#https://pythia.org/releases/pythia83#g' \
+      -e 's#\.tar\.bz2#.tgz#g' \
+      -e 's#faf2730a959369e4d25e1285ab70d915#6fbe60db1514778e94a671e9a75c654e#g' \
       /workdir/corsika/modules/pythia8/CMakeLists.txt
 
 ENV CONAN_CPU_COUNT=4
