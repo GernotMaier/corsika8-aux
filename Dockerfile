@@ -104,6 +104,7 @@ RUN python -m venv /workdir/virtual/environment/corsika-8 && \
 
 ENV PATH="/workdir/corsika-install/bin:/workdir/virtual/environment/corsika-8/bin:$PATH"
 ENV LD_LIBRARY_PATH="/workdir/corsika-install/lib:/workdir/corsika-install/lib64"
+ENV CORSIKA_DATA="/workdir/corsika-install/share/corsika/data"
 ENV VIRTUAL_ENV="/workdir/virtual/environment/corsika-8"
 
 WORKDIR /workdir/corsika/python
