@@ -35,8 +35,10 @@ jobs:
 
       - name: Set CORSIKA branch and image name
         id: vars
+        env:
+          REQUESTED_CORSIKA_BRANCH: ${{ github.event.inputs.corsika_branch || 'master' }}
         run: |
-          CORSIKA_BRANCH="${{ github.event.inputs.corsika_branch || 'master' }}"
+          CORSIKA_BRANCH="$REQUESTED_CORSIKA_BRANCH"
           git check-ref-format --branch "$CORSIKA_BRANCH" > /dev/null
           echo "corsika-branch=$CORSIKA_BRANCH" >> "$GITHUB_OUTPUT"
 
