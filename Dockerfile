@@ -34,8 +34,9 @@ RUN build_log=/tmp/corsika-build.log && \
       local status=$?; \
       if [ "$status" -ne 0 ]; then \
         echo "$description failed; relevant diagnostics follow:"; \
-        grep -nEi 'error:|fatal error:|undefined reference|collect2:|ld:|No rule to make target|killed|failed' "$build_log" || true; \
-        tail -n 300 "$build_log"; \
+        grep -nEi 'error:|fatal error:|undefined reference|collect2:|ld:|No rule to make target|killed|failed|cannot|not found|no such file' "$build_log" | tail -n 20 | cut -c1-240 || true; \
+        echo "End of build log:"; \
+        tail -n 20 "$build_log" | cut -c1-240; \
       fi; \
       return "$status"; \
     }; \
