@@ -17,7 +17,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
@@ -32,28 +31,37 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set CORSIKA branch and image name
         id: vars
+        env:
+          REQUESTED_CORSIKA_BRANCH: ${{ github.event.inputs.corsika_branch || 'master' }}
         run: |
-          CORSIKA_BRANCH="${{ github.event.inputs.corsika_branch || 'master' }}"
-          echo "corsika-branch=$CORSIKA_BRANCH" >> $GITHUB_OUTPUT
+          CORSIKA_BRANCH="$REQUESTED_CORSIKA_BRANCH"
+          git check-ref-format --branch "$CORSIKA_BRANCH" > /dev/null
+          echo "corsika-branch=$CORSIKA_BRANCH" >> "$GITHUB_OUTPUT"
+
+          REPOSITORY_NAME=$(printf '%s' "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "repository-name=$REPOSITORY_NAME" >> "$GITHUB_OUTPUT"
 
           if [ "$CORSIKA_BRANCH" != "master" ]; then
-            # Sanitize branch name for Docker tag (replace / with -)
-            BRANCH_SAFE=$(echo "$CORSIKA_BRANCH" | sed 's/\//-/g')
-            IMAGE_NAME="${{ env.IMAGE_NAME }}-corsika-$BRANCH_SAFE"
+            # A Git branch may contain characters that are illegal in an image
+            # repository name. Keep a readable slug and a hash to avoid collisions.
+            BRANCH_SLUG=$(printf '%s' "$CORSIKA_BRANCH" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-' | sed 's/^[._-]*//; s/[._-]*$//' | cut -c1-48)
+            test -n "$BRANCH_SLUG"
+            BRANCH_HASH=$(printf '%s' "$CORSIKA_BRANCH" | sha256sum | cut -c1-12)
+            IMAGE_NAME="$REPOSITORY_NAME-corsika-$BRANCH_SLUG-$BRANCH_HASH"
           else
-            IMAGE_NAME="${{ env.IMAGE_NAME }}"
+            IMAGE_NAME="$REPOSITORY_NAME"
           fi
-          echo "image-name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "image-name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -61,7 +69,7 @@ jobs:
 
       - name: Extract metadata for runtime image
         id: meta-runtime
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ steps.vars.outputs.image-name }}
           tags: |
@@ -77,9 +85,21 @@ jobs:
             corsika.branch=${{ steps.vars.outputs.corsika-branch }}
             corsika.image-type=runtime
 
+      - name: Extract metadata for toolchain image
+        id: meta-toolchain
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain
+          tags: |
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=CORSIKA8 Toolchain
+            org.opencontainers.image.description=Reusable CORSIKA8 compiler and Conan toolchain
+            corsika.image-type=toolchain
+
       - name: Extract metadata for development image
         id: meta-dev
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ steps.vars.outputs.image-name }}-dev
           tags: |
@@ -95,9 +115,24 @@ jobs:
             corsika.branch=${{ steps.vars.outputs.corsika-branch }}
             corsika.image-type=development
 
+      - name: Build and push toolchain image
+        id: build-toolchain
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile.toolchain
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta-toolchain.outputs.tags }}
+          labels: ${{ steps.meta-toolchain.outputs.labels }}
+          cache-from: type=gha,scope=toolchain
+          cache-to: type=gha,mode=max,scope=toolchain
+          build-args: |
+            PYTHON_VERSION=3.12
+
       - name: Build and push development image
         id: build-dev
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: builder
@@ -109,13 +144,13 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             FLUKA=OFF
-            PYTHON_VERSION=3.12
+            BUILD_JOBS=2
             CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
-            BUILDKIT_INLINE_CACHE=1
+            CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
 
       - name: Build and push runtime image
         id: build-runtime
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: runtime
@@ -127,10 +162,12 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             FLUKA=OFF
+            BUILD_JOBS=2
             PYTHON_VERSION=3.12
             CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
+            CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
 
-  unit-tests:
+  unit-tests-dev:
     runs-on: ubuntu-latest
     needs: build
     permissions:
@@ -139,7 +176,7 @@ jobs:
 
     steps:
       - name: Log in to Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -147,6 +184,29 @@ jobs:
 
       - name: Run unit tests
         run: |
-          # Use development image for testing since it contains the build directory
           IMAGE_TAG=$(echo "${{ needs.build.outputs.dev-image-tag }}" | head -n1)
-          docker run --rm $IMAGE_TAG bash -c "cd /workdir/corsika-build && ctest -j4"
+          docker run --rm "$IMAGE_TAG" bash -c "cd /workdir/corsika-build && ctest -j2"
+
+  shower-tests:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Log in to Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Shower simulations
+        run: |
+          # Exercise the runtime image; the development image is covered by ctest.
+          # metadata-action can emit several tags; use its first (canonical) tag.
+          IMAGE_TAG=$(echo "${{ needs.build.outputs.runtime-image-tag }}" | head -n1)
+          test -n "$IMAGE_TAG"
+          docker run --rm "$IMAGE_TAG" bash -c \
+          "cd /workdir/corsika-install/bin && ./c8_air_shower --pdg 2212 -E 100. -f proton_shower"
