@@ -12,7 +12,7 @@ on:
       corsika_branch:
         description: 'CORSIKA branch to build'
         required: false
-        default: 'master'
+        default: 'main'
         type: string
 
 env:
@@ -36,7 +36,7 @@ jobs:
       - name: Set CORSIKA branch and image name
         id: vars
         env:
-          REQUESTED_CORSIKA_BRANCH: ${{ github.event.inputs.corsika_branch || 'master' }}
+          REQUESTED_CORSIKA_BRANCH: ${{ github.event.inputs.corsika_branch || 'main' }}
         run: |
           CORSIKA_BRANCH="$REQUESTED_CORSIKA_BRANCH"
           git check-ref-format --branch "$CORSIKA_BRANCH" > /dev/null
@@ -45,7 +45,7 @@ jobs:
           REPOSITORY_NAME=$(printf '%s' "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "repository-name=$REPOSITORY_NAME" >> "$GITHUB_OUTPUT"
 
-          if [ "$CORSIKA_BRANCH" != "master" ]; then
+          if [ "$CORSIKA_BRANCH" != "main" ]; then
             # A Git branch may contain characters that are illegal in an image
             # repository name. Keep a readable slug and a hash to avoid collisions.
             BRANCH_SLUG=$(printf '%s' "$CORSIKA_BRANCH" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-' | sed 's/^[._-]*//; s/[._-]*$//' | cut -c1-48)
