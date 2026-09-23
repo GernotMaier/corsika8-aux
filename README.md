@@ -14,7 +14,7 @@ environment, and the Conan dependencies generated from that ref's
 
 ```console
 podman build --platform=linux/arm64 -f Dockerfile.toolchain \
-  --build-arg CORSIKA_REF=master -t corsika8-toolchain .
+  --build-arg CORSIKA_REF=main -t corsika8-toolchain .
 ```
 
 ### Runtime image
@@ -23,7 +23,7 @@ podman build --platform=linux/arm64 -f Dockerfile.toolchain \
 podman build --platform=linux/arm64 \
   --build-arg CORSIKA_TOOLCHAIN_IMAGE=localhost/corsika8-toolchain \
   --build-arg BUILD_JOBS=4 \
-  --build-arg CORSIKA_REF=master \
+  --build-arg CORSIKA_REF=main \
   -t corsika8 .
 ```
 

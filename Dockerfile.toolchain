@@ -3,7 +3,7 @@
 FROM almalinux:9.5-minimal
 
 ARG PYTHON_VERSION="3.12"
-ARG CORSIKA_REF="master"
+ARG CORSIKA_REF="main"
 WORKDIR /workdir/
 
 RUN microdnf update -y && \

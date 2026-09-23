@@ -5,8 +5,8 @@ FROM ${CORSIKA_TOOLCHAIN_IMAGE} AS builder
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG FLUKA=OFF
-ARG CORSIKA_BRANCH="master"
-ARG CORSIKA_REF="master"
+ARG CORSIKA_BRANCH="main"
+ARG CORSIKA_REF="main"
 ARG BUILD_JOBS=4
 WORKDIR /workdir/
 
