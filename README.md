@@ -21,10 +21,15 @@ podman build --platform=linux/arm64 -f Dockerfile.toolchain -t corsika8-toolchai
 podman build --platform=linux/arm64 \
   --build-arg CORSIKA_TOOLCHAIN_IMAGE=localhost/corsika8-toolchain \
   --build-arg BUILD_JOBS=4 \
+<<<<<<< Updated upstream
   --build-arg CORSIKA_BRANCH=master -t corsika8 .
 podman build --platform=linux/arm64 \
   --build-arg CORSIKA_TOOLCHAIN_IMAGE=localhost/corsika8-toolchain \
   --build-arg CORSIKA_BRANCH=radek_cherenkov -t corsika8-radek .
+=======
+  --build-arg CORSIKA_BRANCH=main \
+  -t corsika8 .
+>>>>>>> Stashed changes
 ```
 
 ```console
@@ -37,16 +42,9 @@ the CORSIKA source tree, build directories, and test executables:
 ```console
 podman build --target builder \
   --build-arg CORSIKA_TOOLCHAIN_IMAGE=localhost/corsika8-toolchain \
-  --build-arg CORSIKA_BRANCH=radek_cherenkov -t corsika8-dev .
+  -t corsika8-dev .
 ```
 
 The runtime image is built in `Release` mode. It contains the installed CORSIKA
 data at `/workdir/corsika-install/share/corsika/data`; set `CORSIKA_DATA` only
 when intentionally overriding that location.
-
-The CI workflow pins each code build to the digest of its published toolchain
-image. A future dependency image can safely cache Conan packages; a simple
-build-cache mount is insufficient because CMake records absolute Conan paths.
-
-`BUILD_JOBS` defaults to `4`. Lower it on constrained hosts; CI uses `2` to
-avoid memory pressure while compiling CORSIKA and its external projects.
