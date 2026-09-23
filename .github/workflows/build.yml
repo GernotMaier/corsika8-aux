@@ -207,6 +207,12 @@ jobs:
                 echo "=== Verbose rerun of failed tests ===" | tee /diagnostics/rerun-failed.log
                 ctest --rerun-failed -j1 -VV 2>&1 | tee -a /diagnostics/rerun-failed.log || true
                 cp Testing/Temporary/LastTest.log /diagnostics/LastTest.log 2>/dev/null || true
+                if [ -d test_outputs ]; then
+                  cp -a test_outputs /diagnostics/junit
+                  echo "=== JUnit failures ===" | tee /diagnostics/junit-failures.log
+                  grep -R -n -E "<(failure|error)( |>)" test_outputs \
+                    | tee -a /diagnostics/junit-failures.log || true
+                fi
               fi
               exit "$test_status"
             '
