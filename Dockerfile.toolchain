@@ -9,7 +9,7 @@ WORKDIR /workdir/
 RUN microdnf update -y && \
     microdnf install -y \
     binutils cmake findutils \
-    curl gcc-c++ gcc-gfortran git make \
+    gcc-c++ gcc-gfortran git make \
     perl perl-core \
     python${PYTHON_VERSION} python${PYTHON_VERSION}-pip \
     python${PYTHON_VERSION}-devel rsync tar vim && \
