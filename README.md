@@ -8,11 +8,13 @@ Please refer to the main [CORSIKA gitlab](https://gitlab.iap.kit.edu/AirShowerPh
 
 ### Toolchain image
 
-Build the toolchain once. It contains compilers, the Python environment, and
-Conan, but no CORSIKA source. Reuse it when building different CORSIKA refs.
+Build the toolchain once per CORSIKA ref. It contains compilers, the Python
+environment, and the Conan dependencies generated from that ref's
+`conanfile.py`, but no CORSIKA source checkout.
 
 ```console
-podman build --platform=linux/arm64 -f Dockerfile.toolchain -t corsika8-toolchain .
+podman build --platform=linux/arm64 -f Dockerfile.toolchain \
+  --build-arg CORSIKA_REF=master -t corsika8-toolchain .
 ```
 
 ### Runtime image
@@ -21,15 +23,8 @@ podman build --platform=linux/arm64 -f Dockerfile.toolchain -t corsika8-toolchai
 podman build --platform=linux/arm64 \
   --build-arg CORSIKA_TOOLCHAIN_IMAGE=localhost/corsika8-toolchain \
   --build-arg BUILD_JOBS=4 \
-<<<<<<< Updated upstream
-  --build-arg CORSIKA_BRANCH=master -t corsika8 .
-podman build --platform=linux/arm64 \
-  --build-arg CORSIKA_TOOLCHAIN_IMAGE=localhost/corsika8-toolchain \
-  --build-arg CORSIKA_BRANCH=radek_cherenkov -t corsika8-radek .
-=======
-  --build-arg CORSIKA_BRANCH=main \
+  --build-arg CORSIKA_REF=master \
   -t corsika8 .
->>>>>>> Stashed changes
 ```
 
 ```console
