@@ -178,6 +178,75 @@ jobs:
             CORSIKA_REF=${{ steps.vars.outputs.corsika-ref }}
             CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
 
+  build-osx:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Resolve CORSIKA revision
+        id: vars
+        env:
+          REQUESTED_CORSIKA_BRANCH: ${{ github.event.inputs.corsika_branch || 'main' }}
+        run: |
+          CORSIKA_BRANCH="$REQUESTED_CORSIKA_BRANCH"
+          git check-ref-format --branch "$CORSIKA_BRANCH" > /dev/null
+          CORSIKA_REF=$(git ls-remote https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git "refs/heads/$CORSIKA_BRANCH" | awk 'NR == 1 { print $1 }')
+          test -n "$CORSIKA_REF"
+          echo "corsika-branch=$CORSIKA_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "corsika-ref=$CORSIKA_REF" >> "$GITHUB_OUTPUT"
+
+      - name: Install macOS build dependencies
+        run: |
+          brew install cmake gcc
+          python3 -m venv "$RUNNER_TEMP/corsika-venv"
+          "$RUNNER_TEMP/corsika-venv/bin/pip" install --upgrade pip
+          "$RUNNER_TEMP/corsika-venv/bin/pip" install "conan>=2.20.0" numpy==2.3 particle==0.25.1
+
+      - name: Compile and test CORSIKA
+        env:
+          CORSIKA_REF: ${{ steps.vars.outputs.corsika-ref }}
+        run: |
+          export PATH="$RUNNER_TEMP/corsika-venv/bin:$PATH"
+          git init corsika
+          cd corsika
+          git remote add origin https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git
+          git fetch --depth 1 origin "$CORSIKA_REF"
+          git checkout --detach FETCH_HEAD
+          git submodule update --init --recursive --depth 1
+          sed -i '' \
+            -e 's#https://pythia.org/download/pythia83#https://pythia.org/releases/pythia83#g' \
+            -e 's#\.tar\.bz2#.tgz#g' \
+            -e 's#faf2730a959369e4d25e1285ab70d915#6fbe60db1514778e94a671e9a75c654e#g' \
+            modules/pythia8/CMakeLists.txt
+          cd ..
+
+          export CONAN_HOME="$HOME/.conan2"
+          conan profile detect --force
+          conan profile detect --force --name corsika8
+          sed -i '' \
+            -e 's/^compiler\.cppstd=.*/compiler.cppstd=gnu17/' \
+            -e 's/^compiler\.libcxx=.*/compiler.libcxx=libc++/' \
+            "$CONAN_HOME/profiles/corsika8"
+          conan install "$PWD/corsika" \
+            --output-folder="$PWD/corsika/conan_cmake" \
+            --build=missing \
+            --settings=build_type=Release \
+            --profile:host=corsika8 \
+            --profile:build=corsika8
+
+          cmake -S corsika -B corsika-build \
+            -D CONAN_CMAKE_DIR="$PWD/corsika/conan_cmake" \
+            -D CMAKE_TOOLCHAIN_FILE="$PWD/corsika/conan_cmake/conan_toolchain.cmake" \
+            -D CMAKE_POLICY_DEFAULT_CMP0091=NEW \
+            -D CMAKE_BUILD_TYPE=Release \
+            -D WITH_FLUKA=OFF \
+            -D CMAKE_INSTALL_PREFIX="$PWD/corsika-install"
+          BUILD_JOBS=$(sysctl -n hw.ncpu)
+          cmake --build corsika-build --parallel "$BUILD_JOBS"
+          ctest --test-dir corsika-build --output-on-failure --parallel "$BUILD_JOBS"
+
   unit-tests-dev:
     runs-on: ubuntu-latest
     needs: build
