@@ -61,7 +61,7 @@ jobs:
           tar -czf "$RUNNER_TEMP/corsika-source.tar.gz" -C "$RUNNER_TEMP" corsika
 
       - name: Upload CORSIKA source
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: corsika-source
           path: ${{ runner.temp }}/corsika-source.tar.gz
@@ -291,7 +291,7 @@ jobs:
 
       - name: Upload macOS test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: macos-test-results
           path: corsika-build/test_outputs/junit-*.xml
@@ -356,7 +356,7 @@ jobs:
 
       - name: Upload CTest diagnostics
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: ctest-diagnostics
           path: ctest-diagnostics
