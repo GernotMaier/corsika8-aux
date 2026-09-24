@@ -5,21 +5,21 @@ FROM ${CORSIKA_TOOLCHAIN_IMAGE} AS builder
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG FLUKA=OFF
-ARG CORSIKA_BRANCH="main"
 ARG CORSIKA_REF="main"
 ARG BUILD_JOBS=4
 WORKDIR /workdir/
 
 # Pythia's historic archives are served as .tgz files under /releases.  Conan
 # was already installed from this exact ref's recipe in the toolchain image.
-# Fetch only the selected tip and initialize each submodule after checking out
-# the immutable revision.  This keeps every CORSIKA repository clone to one.
+# Fetch the immutable revision directly instead of cloning a moving branch
+# tip.  This keeps the source checkout shallow and guarantees it matches the
+# Conan recipe selected for the toolchain image.
 RUN git init /workdir/corsika && \
-      cd /workdir/corsika && \
-      git remote add origin https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git && \
-      git fetch --depth 1 origin "${CORSIKA_REF}" && \
-      git checkout --detach FETCH_HEAD && \
-      git submodule update --init --recursive --depth 1 && \
+    cd /workdir/corsika && \
+    git remote add origin https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git && \
+    git fetch --depth 1 origin "${CORSIKA_REF}" && \
+    git checkout --detach FETCH_HEAD && \
+    git submodule update --init --recursive --depth 1 && \
     sed -i \
       -e 's#https://pythia.org/download/pythia83#https://pythia.org/releases/pythia83#g' \
       -e 's#\.tar\.bz2#.tgz#g' \

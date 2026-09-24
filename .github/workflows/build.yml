@@ -96,10 +96,13 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain
           tags: |
-            type=raw,value=latest
+            type=raw,value=ref-${{ steps.vars.outputs.corsika-ref }}
+            type=raw,value=latest,enable=${{ steps.vars.outputs.corsika-branch == 'main' }}
           labels: |
             org.opencontainers.image.title=CORSIKA8 Toolchain
             org.opencontainers.image.description=Reusable CORSIKA8 compiler and Conan toolchain
+            corsika.ref=${{ steps.vars.outputs.corsika-ref }}
+            corsika.branch=${{ steps.vars.outputs.corsika-branch }}
             corsika.image-type=toolchain
 
       - name: Extract metadata for development image
@@ -153,7 +156,6 @@ jobs:
           build-args: |
             FLUKA=OFF
             BUILD_JOBS=2
-            CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
             CORSIKA_REF=${{ steps.vars.outputs.corsika-ref }}
             CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
 
@@ -173,7 +175,6 @@ jobs:
             FLUKA=OFF
             BUILD_JOBS=2
             PYTHON_VERSION=3.12
-            CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
             CORSIKA_REF=${{ steps.vars.outputs.corsika-ref }}
             CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
 
