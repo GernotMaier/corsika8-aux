@@ -289,6 +289,14 @@ jobs:
           BUILD_JOBS=$(sysctl -n hw.ncpu)
           ctest --test-dir corsika-build --output-on-failure --parallel "$BUILD_JOBS"
 
+      - name: Upload macOS test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-test-results
+          path: corsika-build/test_outputs/junit-*.xml
+          if-no-files-found: warn
+
       - name: Run macOS shower test
         env:
           CORSIKA_DATA: ${{ github.workspace }}/corsika-install/share/corsika/data
