@@ -14,11 +14,12 @@ WORKDIR /workdir/
 # was already installed from this exact ref's recipe in the toolchain image.
 # Fetch only the selected tip and initialize each submodule after checking out
 # the immutable revision.  This keeps every CORSIKA repository clone to one.
-RUN git clone --depth 1 --branch "${CORSIKA_BRANCH}" \
-      https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git && \
-    cd /workdir/corsika && \
-    git checkout --detach "${CORSIKA_REF}" && \
-    git submodule update --init --recursive --depth 1 && \
+RUN git init /workdir/corsika && \
+      cd /workdir/corsika && \
+      git remote add origin https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git && \
+      git fetch --depth 1 origin "${CORSIKA_REF}" && \
+      git checkout --detach FETCH_HEAD && \
+      git submodule update --init --recursive --depth 1 && \
     sed -i \
       -e 's#https://pythia.org/download/pythia83#https://pythia.org/releases/pythia83#g' \
       -e 's#\.tar\.bz2#.tgz#g' \
