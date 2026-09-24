@@ -5,12 +5,21 @@ FROM ${CORSIKA_TOOLCHAIN_IMAGE} AS builder
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG FLUKA=OFF
-ARG CORSIKA_BRANCH="main"
+ARG CORSIKA_REF="main"
 ARG BUILD_JOBS=4
 WORKDIR /workdir/
 
-# Pythia's historic archives are served as .tgz files under /releases.
-RUN git clone --recursive --branch "${CORSIKA_BRANCH}" https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git && \
+# Pythia's historic archives are served as .tgz files under /releases.  Conan
+# was already installed from this exact ref's recipe in the toolchain image.
+# Fetch the immutable revision directly instead of cloning a moving branch
+# tip.  This keeps the source checkout shallow and guarantees it matches the
+# Conan recipe selected for the toolchain image.
+RUN git init /workdir/corsika && \
+    cd /workdir/corsika && \
+    git remote add origin https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git && \
+    git fetch --depth 1 origin "${CORSIKA_REF}" && \
+    git checkout --detach FETCH_HEAD && \
+    git submodule update --init --recursive --depth 1 && \
     sed -i \
       -e 's#https://pythia.org/download/pythia83#https://pythia.org/releases/pythia83#g' \
       -e 's#\.tar\.bz2#.tgz#g' \
@@ -19,13 +28,15 @@ RUN git clone --recursive --branch "${CORSIKA_BRANCH}" https://gitlab.iap.kit.ed
 
 ENV CONAN_CPU_COUNT=4
 WORKDIR /workdir/corsika-build
-RUN ../corsika/conan-install.sh \
-     --source-directory ../corsika --release && \
-    conan cache clean "*" --source --build --download
+RUN cp -a /workdir/corsika-conan /workdir/corsika/conan_cmake
 
-RUN ../corsika/corsika-cmake.sh \
-     -c "-DWITH_FLUKA=${FLUKA} \
-     -DCMAKE_INSTALL_PREFIX=../corsika-install" && \
+RUN cmake -S ../corsika \
+      -D CONAN_CMAKE_DIR=../corsika/conan_cmake \
+      -D CMAKE_TOOLCHAIN_FILE=../corsika/conan_cmake/conan_toolchain.cmake \
+      -D CMAKE_POLICY_DEFAULT_CMP0091=NEW \
+      -D CMAKE_BUILD_TYPE=Release \
+      -D WITH_FLUKA=${FLUKA} \
+      -D CMAKE_INSTALL_PREFIX=../corsika-install && \
     sed -i \
       's#/workdir/corsika-build/modules/pythia8/pythia8/install/share/Pythia8/xmldoc/#/workdir/corsika-install/share/Pythia8/xmldoc/#' \
       /workdir/corsika-build/corsika/modules/pythia8/Pythia8ConfigurationDirectory.hpp

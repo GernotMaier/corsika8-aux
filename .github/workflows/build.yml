@@ -42,6 +42,10 @@ jobs:
           git check-ref-format --branch "$CORSIKA_BRANCH" > /dev/null
           echo "corsika-branch=$CORSIKA_BRANCH" >> "$GITHUB_OUTPUT"
 
+          CORSIKA_REF=$(git ls-remote https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git "refs/heads/$CORSIKA_BRANCH" | awk 'NR == 1 { print $1 }')
+          test -n "$CORSIKA_REF"
+          echo "corsika-ref=$CORSIKA_REF" >> "$GITHUB_OUTPUT"
+
           REPOSITORY_NAME=$(printf '%s' "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "repository-name=$REPOSITORY_NAME" >> "$GITHUB_OUTPUT"
 
@@ -56,6 +60,7 @@ jobs:
             IMAGE_NAME="$REPOSITORY_NAME"
           fi
           echo "image-name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "cache-scope=corsika-$IMAGE_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -91,10 +96,13 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain
           tags: |
-            type=raw,value=latest
+            type=raw,value=ref-${{ steps.vars.outputs.corsika-ref }}
+            type=raw,value=latest,enable=${{ steps.vars.outputs.corsika-branch == 'main' }}
           labels: |
             org.opencontainers.image.title=CORSIKA8 Toolchain
             org.opencontainers.image.description=Reusable CORSIKA8 compiler and Conan toolchain
+            corsika.ref=${{ steps.vars.outputs.corsika-ref }}
+            corsika.branch=${{ steps.vars.outputs.corsika-branch }}
             corsika.image-type=toolchain
 
       - name: Extract metadata for development image
@@ -129,6 +137,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=toolchain
           build-args: |
             PYTHON_VERSION=3.12
+            CORSIKA_REF=${{ steps.vars.outputs.corsika-ref }}
 
       - name: Build and push development image
         id: build-dev
@@ -140,12 +149,14 @@ jobs:
           push: true
           tags: ${{ steps.meta-dev.outputs.tags }}
           labels: ${{ steps.meta-dev.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Both targets share this cache.  The runtime build therefore reuses
+          # the already-solved builder stage instead of cloning CORSIKA again.
+          cache-from: type=gha,scope=${{ steps.vars.outputs.cache-scope }}
+          cache-to: type=gha,mode=max,scope=${{ steps.vars.outputs.cache-scope }}
           build-args: |
             FLUKA=OFF
             BUILD_JOBS=2
-            CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
+            CORSIKA_REF=${{ steps.vars.outputs.corsika-ref }}
             CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
 
       - name: Build and push runtime image
@@ -158,13 +169,13 @@ jobs:
           push: true
           tags: ${{ steps.meta-runtime.outputs.tags }}
           labels: ${{ steps.meta-runtime.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ steps.vars.outputs.cache-scope }}
+          cache-to: type=gha,mode=max,scope=${{ steps.vars.outputs.cache-scope }}
           build-args: |
             FLUKA=OFF
             BUILD_JOBS=2
             PYTHON_VERSION=3.12
-            CORSIKA_BRANCH=${{ steps.vars.outputs.corsika-branch }}
+            CORSIKA_REF=${{ steps.vars.outputs.corsika-ref }}
             CORSIKA_TOOLCHAIN_IMAGE=${{ env.REGISTRY }}/${{ steps.vars.outputs.repository-name }}-toolchain@${{ steps.build-toolchain.outputs.digest }}
 
   unit-tests-dev:

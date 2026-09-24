@@ -3,6 +3,7 @@
 FROM almalinux:9.5-minimal
 
 ARG PYTHON_VERSION="3.12"
+ARG CORSIKA_REF="main"
 WORKDIR /workdir/
 
 RUN microdnf update -y && \
@@ -24,3 +25,26 @@ ENV VIRTUAL_ENV=/workdir/virtual/environment/corsika-8
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 # Keep Conan's package cache at a stable, mountable location for code builds.
 ENV CONAN_HOME=/root/.conan2
+
+# A CORSIKA source checkout is intentionally not part of this image.  The
+# recipe is sufficient for Conan to populate its package cache and generate
+# the CMake files consumed by the later source build.  Fetching this one file
+# avoids a second clone of the (recursive) CORSIKA repository.
+# Conan uses the default profile for build requirements even when the named
+# profile is supplied for the host configuration.
+RUN curl --fail --location --retry 5 --silent --show-error \
+      "https://gitlab.iap.kit.edu/AirShowerPhysics/corsika/-/raw/${CORSIKA_REF}/conanfile.py" \
+      --output /workdir/conanfile.py && \
+    conan profile detect --force && \
+    conan profile detect --force --name corsika8 && \
+    sed -i \
+      -e 's/^compiler\.cppstd=.*/compiler.cppstd=gnu17/' \
+      -e 's/^compiler\.libcxx=.*/compiler.libcxx=libstdc++11/' \
+      "$CONAN_HOME/profiles/corsika8" && \
+    conan install /workdir \
+      --output-folder=/workdir/corsika-conan \
+      --build=missing \
+      --settings=build_type=Release \
+      --profile=corsika8 && \
+    rm -f /workdir/conanfile.py && \
+    conan cache clean '*' --source --build --download
