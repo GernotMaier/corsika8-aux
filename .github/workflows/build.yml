@@ -277,7 +277,45 @@ jobs:
       - name: Run unit tests
         run: |
           IMAGE_TAG=$(echo "${{ needs.build.outputs.dev-image-tag }}" | head -n1)
-          docker run --rm "$IMAGE_TAG" bash -c "cd /workdir/corsika-build && ctest -j2"
+          mkdir -p ctest-diagnostics
+          docker run --rm \
+            -v "$PWD/ctest-diagnostics:/diagnostics" \
+            "$IMAGE_TAG" bash -o pipefail -c '
+              cd /workdir/corsika-build
+              {
+                echo "=== Toolchain ==="
+                cmake --version
+                c++ --version
+                gfortran --version || true
+                conan --version || true
+                echo "=== CMake cache ==="
+                grep -E "^(CMAKE_(C|CXX|Fortran)_COMPILER|CMAKE_BUILD_TYPE):" CMakeCache.txt || true
+              } 2>&1 | tee /diagnostics/environment.log
+
+              set +e
+              ctest -j2 --output-on-failure 2>&1 | tee /diagnostics/ctest.log
+              test_status=${PIPESTATUS[0]}
+              if [ "$test_status" -ne 0 ]; then
+                echo "=== Verbose rerun of failed tests ===" | tee /diagnostics/rerun-failed.log
+                ctest --rerun-failed -j1 -VV 2>&1 | tee -a /diagnostics/rerun-failed.log || true
+                cp Testing/Temporary/LastTest.log /diagnostics/LastTest.log 2>/dev/null || true
+                if [ -d test_outputs ]; then
+                  cp -a test_outputs /diagnostics/junit
+                  echo "=== JUnit failures ===" | tee /diagnostics/junit-failures.log
+                  grep -R -n -E "<(failure|error)( |>)" test_outputs \
+                    | tee -a /diagnostics/junit-failures.log || true
+                fi
+              fi
+              exit "$test_status"
+            '
+
+      - name: Upload CTest diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-diagnostics
+          path: ctest-diagnostics
+          if-no-files-found: warn
 
   shower-tests:
     runs-on: ubuntu-latest
