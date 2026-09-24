@@ -245,7 +245,19 @@ jobs:
             -D CMAKE_INSTALL_PREFIX="$PWD/corsika-install"
           BUILD_JOBS=$(sysctl -n hw.ncpu)
           cmake --build corsika-build --parallel "$BUILD_JOBS"
+          cmake --install corsika-build
+
+      - name: Run macOS unit tests
+        run: |
+          BUILD_JOBS=$(sysctl -n hw.ncpu)
           ctest --test-dir corsika-build --output-on-failure --parallel "$BUILD_JOBS"
+
+      - name: Run macOS shower test
+        env:
+          CORSIKA_DATA: ${{ github.workspace }}/corsika-install/share/corsika/data
+        run: |
+          ./corsika-install/bin/c8_air_shower \
+            --pdg 2212 -E 100. -f proton_shower
 
   unit-tests-dev:
     runs-on: ubuntu-latest
