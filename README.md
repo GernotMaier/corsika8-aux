@@ -19,6 +19,15 @@ podman build --platform=linux/arm64 -f Dockerfile.toolchain \
 
 ### Runtime image
 
+The image build expects a CORSIKA source checkout, including its submodules, in
+the `corsika/` directory of the build context:
+
+```console
+git clone --depth 1 --branch main \
+  https://gitlab.iap.kit.edu/AirShowerPhysics/corsika.git corsika
+git -C corsika submodule update --init --recursive --depth 1
+```
+
 ```console
 podman build --platform=linux/arm64 \
   --build-arg CORSIKA_TOOLCHAIN_IMAGE=localhost/corsika8-toolchain \
