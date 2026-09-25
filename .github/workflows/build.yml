@@ -53,6 +53,7 @@ jobs:
           git -C "$CORSIKA_DIR" checkout --detach FETCH_HEAD
           test "$(git -C "$CORSIKA_DIR" rev-parse HEAD)" = "$CORSIKA_REF"
           git -C "$CORSIKA_DIR" submodule update --init --recursive --depth 1
+          printf '%s\n' "$CORSIKA_REF" > "$CORSIKA_DIR/.corsika-ref"
           sed -i \
             -e 's#https://pythia.org/download/pythia83#https://pythia.org/releases/pythia83#g' \
             -e 's#\.tar\.bz2#.tgz#g' \
@@ -87,6 +88,9 @@ jobs:
         with:
           name: corsika-source
           path: ${{ runner.temp }}/corsika-source
+
+      - name: Remove stale CORSIKA source tree
+        run: rm -rf "$GITHUB_WORKSPACE/corsika"
 
       - name: Extract CORSIKA source
         run: tar -xzf "$RUNNER_TEMP/corsika-source/corsika-source.tar.gz" -C "$GITHUB_WORKSPACE"
@@ -237,13 +241,21 @@ jobs:
   build-osx:
     needs: gitwork
     runs-on: macos-14
+    permissions:
+      contents: read
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
       - name: Download CORSIKA source
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
         with:
           name: corsika-source
           path: ${{ runner.temp }}/corsika-source
+
+      - name: Remove stale CORSIKA source tree
+        run: rm -rf "$GITHUB_WORKSPACE/corsika"
 
       - name: Extract CORSIKA source
         run: tar -xzf "$RUNNER_TEMP/corsika-source/corsika-source.tar.gz" -C "$GITHUB_WORKSPACE"
