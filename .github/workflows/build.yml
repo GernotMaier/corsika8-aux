@@ -53,6 +53,7 @@ jobs:
           git -C "$CORSIKA_DIR" checkout --detach FETCH_HEAD
           test "$(git -C "$CORSIKA_DIR" rev-parse HEAD)" = "$CORSIKA_REF"
           git -C "$CORSIKA_DIR" submodule update --init --recursive --depth 1
+          printf '%s\n' "$CORSIKA_REF" > "$CORSIKA_DIR/.corsika-ref"
           sed -i \
             -e 's#https://pythia.org/download/pythia83#https://pythia.org/releases/pythia83#g' \
             -e 's#\.tar\.bz2#.tgz#g' \

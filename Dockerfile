@@ -48,8 +48,8 @@ ENV FLUPRO=/opt/fluka \
 # that source archive with the Linux and macOS jobs.  Conan was already
 # installed from this exact ref's recipe in the toolchain image.
 COPY corsika /workdir/corsika
-RUN test "$(git -C /workdir/corsika rev-parse HEAD)" = \
-      "${CORSIKA_REF}"
+RUN test "$(cat /workdir/corsika/.corsika-ref)" = "${CORSIKA_REF}" && \
+    rm -f /workdir/corsika/.corsika-ref
 RUN sed -i \
       -e 's#https://pythia.org/download/pythia83#https://pythia.org/releases/pythia83#g' \
       -e 's#\.tar\.bz2#.tgz#g' \
