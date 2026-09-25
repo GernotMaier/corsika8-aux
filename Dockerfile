@@ -13,6 +13,7 @@ ARG CORSIKA_REF="main"
 ARG BUILD_JOBS=4
 WORKDIR /workdir/
 
+<<<<<<< HEAD
 # FLUKA is available only to registered users. The secret is expected to be a
 # curl Basic-auth value (normally `fuid-XXXX:password`). It is mounted only for
 # this command and is never copied into an image layer or build argument.
@@ -56,6 +57,15 @@ RUN git init /workdir/corsika && \
     git checkout --detach FETCH_HEAD && \
     git submodule update --init --recursive --depth 1 && \
     sed -i \
+=======
+# The workflow downloads CORSIKA once, including its submodules, and shares
+# that source archive with the Linux and macOS jobs.  Conan was already
+# installed from this exact ref's recipe in the toolchain image.
+COPY corsika /workdir/corsika
+RUN test "$(git -C /workdir/corsika rev-parse HEAD)" = \
+      "$(git -C /workdir/corsika rev-parse "${CORSIKA_REF}^{commit}")"
+RUN sed -i \
+>>>>>>> origin/main
       -e 's#https://pythia.org/download/pythia83#https://pythia.org/releases/pythia83#g' \
       -e 's#\.tar\.bz2#.tgz#g' \
       -e 's#faf2730a959369e4d25e1285ab70d915#6fbe60db1514778e94a671e9a75c654e#g' \
