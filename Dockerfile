@@ -49,7 +49,7 @@ ENV FLUPRO=/opt/fluka \
 # installed from this exact ref's recipe in the toolchain image.
 COPY corsika /workdir/corsika
 RUN test "$(git -C /workdir/corsika rev-parse HEAD)" = \
-      "$(git -C /workdir/corsika rev-parse "${CORSIKA_REF}^{commit}")"
+      "${CORSIKA_REF}"
 RUN sed -i \
       -e 's#https://pythia.org/download/pythia83#https://pythia.org/releases/pythia83#g' \
       -e 's#\.tar\.bz2#.tgz#g' \
