@@ -250,6 +250,9 @@ jobs:
           name: corsika-source
           path: ${{ runner.temp }}/corsika-source
 
+      - name: Remove stale CORSIKA source tree
+        run: rm -rf "$GITHUB_WORKSPACE/corsika"
+
       - name: Extract CORSIKA source
         run: tar -xzf "$RUNNER_TEMP/corsika-source/corsika-source.tar.gz" -C "$GITHUB_WORKSPACE"
 
